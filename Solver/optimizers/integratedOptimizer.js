@@ -50,8 +50,78 @@ function simulateSwapWithUtility(cfmm, intent) {
   };
 }
 
-// Example formal objective function: maximize output minus gas cost, parameterizable
-function formalObjective(intent, pool, params = { weightUtility: 1, weightSlippage: 0 }) {
+// Extended optimizer parameters with learning rates and constraints
+let optimizerParams = {
+  weightUtility: 1,
+  weightSlippage: 0,
+  learningRate: 0.1,
+  minWeightUtility: 0.1,
+  maxWeightUtility: 5,
+  minWeightSlippage: 0,
+  maxWeightSlippage: 5,
+  crossChainPenalty: 1.2, // Higher cost for cross-chain routes
+  batchSizeLimit: 50,     // Max intents per batch
+  maxGasPerIntent: 500000 // Gas limit per intent
+};
+
+// Enhanced parameter adaptation using exponential moving averages
+const historicalStats = {
+  avgUtility: 1.0,
+  avgSlippage: 0.005,
+  successRate: 0.95,
+  alpha: 0.1 // EMA decay factor
+};
+
+function updateHistoricalStats(newStats) {
+  const α = historicalStats.alpha;
+  historicalStats.avgUtility = α * newStats.avgUtility + (1 - α) * historicalStats.avgUtility;
+  historicalStats.avgSlippage = α * newStats.avgSlippage + (1 - α) * historicalStats.avgSlippage;
+  historicalStats.successRate = α * newStats.successRate + (1 - α) * historicalStats.successRate;
+}
+
+// Sophisticated parameter adaptation based on historical performance
+function adaptOptimizerParams(stats) {
+  updateHistoricalStats(stats);
+  const { learningRate, minWeightUtility, maxWeightUtility, minWeightSlippage, maxWeightSlippage } = optimizerParams;
+  
+  // Utility weight adaptation
+  if (historicalStats.avgUtility < 0.5 && historicalStats.successRate > 0.8) {
+    optimizerParams.weightUtility = Math.min(
+      optimizerParams.weightUtility * (1 + learningRate),
+      maxWeightUtility
+    );
+  } else if (historicalStats.avgUtility > 2.0 || historicalStats.successRate < 0.7) {
+    optimizerParams.weightUtility = Math.max(
+      optimizerParams.weightUtility * (1 - learningRate),
+      minWeightUtility
+    );
+  }
+
+  // Slippage weight adaptation
+  if (historicalStats.avgSlippage > 0.01) {
+    optimizerParams.weightSlippage = Math.min(
+      optimizerParams.weightSlippage * (1 + learningRate),
+      maxWeightSlippage
+    );
+  } else if (historicalStats.avgSlippage < 0.003 && historicalStats.successRate > 0.9) {
+    optimizerParams.weightSlippage = Math.max(
+      optimizerParams.weightSlippage * (1 - learningRate),
+      minWeightSlippage
+    );
+  }
+
+  // Adjust learning rate based on success rate
+  if (historicalStats.successRate < 0.8) {
+    optimizerParams.learningRate = Math.max(optimizerParams.learningRate * 0.9, 0.01);
+  } else if (historicalStats.successRate > 0.95) {
+    optimizerParams.learningRate = Math.min(optimizerParams.learningRate * 1.1, 0.5);
+  }
+
+  return optimizerParams;
+}
+
+// Enhanced formal objective function with cross-chain awareness
+function formalObjective(intent, pool, params = optimizerParams) {
   // Only consider pools with both tokens
   if (!pool.tokens.includes(intent.sellToken) || !pool.tokens.includes(intent.buyToken)) return 0;
   const x = Number(pool.reserves[intent.sellToken]);
@@ -66,8 +136,15 @@ function formalObjective(intent, pool, params = { weightUtility: 1, weightSlippa
   return params.weightUtility * utility - params.weightSlippage * slippage;
 }
 
+// Default optimizer parameters (can be updated by ElizaOS)
+// let optimizerParams = { weightUtility: 1, weightSlippage: 0 };
+
+function setOptimizerParams(params) {
+  optimizerParams = { ...optimizerParams, ...params };
+}
+
 // Main optimizer: matches intents and finds best routing for unmatched
-function optimizeIntents(intents) {
+function optimizeIntents(intents, params = optimizerParams) {
   // Step 1: Find all direct matches (CoW)
   const matches = matchCoWs(intents);
   const matchedIntents = new Set();
@@ -88,9 +165,11 @@ function optimizeIntents(intents) {
     let best = null;
 
     for (const cfmm of candidates) {
-      const result = simulateSwapWithUtility(cfmm, intent);
-      if (result && (!best || result.utility > best.utility)) {
-        best = result;
+      // Use formalObjective with dynamic params
+      const score = formalObjective(intent, cfmm, params);
+      if (score > 0 && (!best || score > best.score)) {
+        const result = simulateSwapWithUtility(cfmm, intent);
+        if (result) best = { ...result, score };
       }
     }
 
@@ -107,9 +186,9 @@ function optimizeIntents(intents) {
 }
 
 // New entry point for global batch optimization
-async function runGlobalBatchOptimizer(intents) {
+async function runGlobalBatchOptimizer(intents, params = optimizerParams) {
   if (CFMMs.length === 0) await updateCFMMs();
-  return globalBatchOptimize(intents, CFMMs, formalObjective);
+  return globalBatchOptimize(intents, CFMMs, (intent, pool) => formalObjective(intent, pool, params));
 }
 
 // Automatically refresh CFMMs every 60 seconds
@@ -123,5 +202,25 @@ async function runOptimizerWithFreshPools(intents) {
   return optimizeIntents(intents);
 }
 
+// ElizaOS can call this to adapt parameters based on recent stats
+function adaptOptimizerParams(stats) {
+  // Example: if avg slippage > 1%, increase slippage penalty
+  if (stats.avgSlippage > 0.01) {
+    optimizerParams.weightSlippage = Math.min(optimizerParams.weightSlippage + 0.5, 5);
+  }
+  // Example: if avg utility < threshold, increase utility weight
+  if (stats.avgUtility < 0.5) {
+    optimizerParams.weightUtility = Math.min(optimizerParams.weightUtility + 0.5, 5);
+  }
+  // ...add more rules as needed
+  return optimizerParams;
+}
+
 // Export both, but backend should use only runGlobalBatchOptimizer for optimal execution
-module.exports = { runOptimizerWithFreshPools, runGlobalBatchOptimizer, optimizeIntents }; // Export for use in runners and backend
+module.exports = {
+  runOptimizerWithFreshPools,
+  runGlobalBatchOptimizer,
+  optimizeIntents,
+  setOptimizerParams,
+  adaptOptimizerParams
+}; // Export for use in runners and backend

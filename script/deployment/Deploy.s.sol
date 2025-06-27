@@ -7,6 +7,7 @@ import {CoWMatcher} from "../../src/CoWMatcher.sol";
 import {CFMMAdapter} from "../../src/CFMMAdapter.sol";
 import {CrossChainBridgeMock} from "../../src/CrossChainBridgeMock.sol";
 import { CrossChainIntentBridge } from "../../src/CrossChainIntentBridge.sol";
+import {SolverRouter} from "../../src/SolverRouter.sol";
 
 contract DeployAll is Script {
     function run() external {
@@ -36,6 +37,10 @@ contract DeployAll is Script {
         // Optionally deploy CrossChainBridgeMock for testing
         CrossChainBridgeMock bridgeMock = new CrossChainBridgeMock();
         console.log("CrossChainBridgeMock:", address(bridgeMock));
+
+        // Deploy SolverRouter
+        address solverRouter = address(new SolverRouter());
+        console.log("SolverRouter:", solverRouter);
 
         vm.stopBroadcast();
     }

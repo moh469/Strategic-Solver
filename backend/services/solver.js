@@ -7,21 +7,61 @@ console.log("IntentsManager ABI loaded?", Array.isArray(config.abis.intentsManag
 console.log("SolverRouter ABI loaded?", Array.isArray(config.abis.solverRouter));
 
 // Setup provider and signer
-const provider = new ethers.JsonRpcProvider(config.rpc.sepolia); // Example for Sepolia
+if (!process.env.PRIVATE_KEY) {
+  throw new Error('PRIVATE_KEY environment variable not set');
+}
+
+const provider = new ethers.JsonRpcProvider(config.rpc.anvil);
 const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
-// Setup contracts
-const intentsManager = new ethers.Contract(
-  config.contracts.intentsManager,
-  config.abis.intentsManager,
-  signer
-);
+// Setup contracts with validation
+async function initializeContracts() {
+  try {
+    console.log('📝 Initializing contracts...');
+    
+    if (!config.contracts.intentsManager) {
+      throw new Error('IntentsManager address not configured');
+    }
+    if (!config.contracts.solverRouter) {
+      throw new Error('SolverRouter address not configured');
+    }
 
-const solverRouter = new ethers.Contract(
-  config.contracts.solverRouter,
-  config.abis.solverRouter,
-  signer
-);
+    const intentsManager = new ethers.Contract(
+      config.contracts.intentsManager,
+      config.abis.intentsManager,
+      signer
+    );
+
+    const solverRouter = new ethers.Contract(
+      config.contracts.solverRouter,
+      config.abis.solverRouter,
+      signer
+    );
+
+    // Verify contracts are deployed
+    const intentsManagerCode = await provider.getCode(config.contracts.intentsManager);
+    const solverRouterCode = await provider.getCode(config.contracts.solverRouter);
+
+    if (intentsManagerCode === '0x') throw new Error('IntentsManager contract not deployed');
+    if (solverRouterCode === '0x') throw new Error('SolverRouter contract not deployed');
+
+    console.log('✅ Contracts initialized successfully');
+    return { intentsManager, solverRouter };
+  } catch (error) {
+    console.error('❌ Failed to initialize contracts:', error);
+    throw error;
+  }
+}
+
+// Initialize contracts
+let intentsManager, solverRouter;
+initializeContracts().then(contracts => {
+  intentsManager = contracts.intentsManager;
+  solverRouter = contracts.solverRouter;
+}).catch(error => {
+  console.error('Failed to initialize solver service:', error);
+  process.exit(1);
+});
 
 // Store intents in memory (DB recommended)
 const pendingIntents = [];
