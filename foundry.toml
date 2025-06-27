@@ -1,0 +1,14 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+fs_permissions = [{ access = "read", path = "./broadcast" }]
+viaIR = true
+optimizer = true
+optimizerRuns = 200
+
+remappings = [
+  '@chainlink/=node_modules/@chainlink/'
+]
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

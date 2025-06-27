@@ -1,0 +1,13 @@
+{
+  "networks": {
+    "sepolia": {
+      "core": {
+        "intentsManager": "0xYourDeployedAddress",
+        "solverRouter": "0xYourDeployedAddress"
+      },
+      "bridges": {
+        "mockBridge": "0xYourDeployedAddress"
+      }
+    }
+  }
+}
