@@ -3,9 +3,9 @@ const { ethers } = require("ethers");
 const config = require("../config");
 const { logMatch } = require("../matches");
 
-console.log("DEBUG PRIVATE_KEY (matcher.js):", process.env.PRIVATE_KEY, "length:", process.env.PRIVATE_KEY?.length);
-const provider = new ethers.JsonRpcProvider(config.rpc.sepolia);
-const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+console.log("DEBUG MATCHER_PRIVATE_KEY (matcher.js):", process.env.MATCHER_PRIVATE_KEY, "length:", process.env.MATCHER_PRIVATE_KEY?.length);
+const provider = new ethers.JsonRpcProvider(config.rpc.anvil);
+const signer = new ethers.Wallet(process.env.MATCHER_PRIVATE_KEY, provider);
 
 // Coded fallback for missing env vars (for local dev)
 process.env.INTENTS_MANAGER = process.env.INTENTS_MANAGER || "0x5FbDB2315678afecb367f032d93F642f64180aa3";

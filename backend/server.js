@@ -14,16 +14,24 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
 // 🔧 Setup provider and signer
-console.log("DEBUG PRIVATE_KEY:", process.env.PRIVATE_KEY, "length:", process.env.PRIVATE_KEY?.length);
-const provider = new ethers.JsonRpcProvider(config.rpc.sepolia);
-const signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+console.log("DEBUG MATCHER_PRIVATE_KEY:", process.env.MATCHER_PRIVATE_KEY, "length:", process.env.MATCHER_PRIVATE_KEY?.length);
+const provider = new ethers.JsonRpcProvider(config.rpc.anvil);
+const signer = new ethers.Wallet(process.env.MATCHER_PRIVATE_KEY, provider);
 
 // 🧪 Log environment details
-console.log("🧪 Loaded .env PRIVATE_KEY:", process.env.PRIVATE_KEY?.slice(0, 10) + "...");
-console.log("🧪 Loaded .env RPC:", process.env.SEPOLIA_RPC);
-console.log("🧪 Config RPC:", config.rpc.sepolia);
-console.log("🧪 Contract address:", config.contracts.intentsManager);
+console.log("🧪 Loaded .env MATCHER_PRIVATE_KEY:", process.env.MATCHER_PRIVATE_KEY?.slice(0, 10) + "...");
+console.log("🧪 Loaded .env RPC:", process.env.ANVIL_RPC);
+console.log("🧪 Intents Manager:", process.env.INTENTS_MANAGER);
+console.log("🧪 CoW Matcher:", process.env.COW_MATCHER);
+console.log("🧪 CFMM Adapter:", process.env.CFMM_ADAPTER);
+console.log("🧪 Cross Chain Bridge:", process.env.CROSS_CHAIN_BRIDGE);
+console.log("🧪 Solver Router:", process.env.SOLVER_ROUTER);
 signer.getAddress().then(addr => console.log("🧪 Signer address:", addr));
 
 // 🔌 Connect contracts

@@ -8,23 +8,47 @@ const erc20Abi = [
   "function mint(address to, uint256 amount) public"  
 ];
 
+// Supported chains for dropdowns
+const chainOptions = [
+  { label: "Anvil Local 1 (31337)", value: "31337" },
+  { label: "Anvil Local 2 (421614)", value: "421614" },
+  { label: "Anvil Local 3 (11155111)", value: "11155111" },
+  { label: "Anvil Local 4 (80002)", value: "80002" },
+];
+
+// Token addresses per chain (mock tokens use the same contract addresses on all chains)
+const tokenAddresses = {
+  31337: {
+    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // CoWMatcher (mock USDC)
+    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", // CFMMAdapter (mock WETH)
+    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // (mock DAI, update if deployed)
+  },
+  421614: {
+    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  },
+  11155111: {
+    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  },
+  80002: {
+    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  },
+};
+
+const cowMatcherAddress = "0x9ac3750C1A8DeC29Ca9dE7F643583c12Ec33FD5D";
+
 const IntentForm = () => {
   const [sellToken, setSellToken] = useState('');
   const [buyToken, setBuyToken] = useState('');
   const [sellAmount, setSellAmount] = useState('');
   const [minBuyAmount, setMinBuyAmount] = useState('');
   const [sourceChain, setSourceChain] = useState('');
-  const [targetChain, setTargetChain] = useState('');
   const [orderType, setOrderType] = useState('Limit Buy');
-
-  const tokenAddresses = {
-    Sepolia: {
-      USDC: "0x447dB80B9629A84aeFcad6c3fa6C0359d73BF796",
-      WETH: "0x8a1FA303F13beb1b6bd34FDC8E42881966733927",
-    }
-  };
-
-  const cowMatcherAddress = "0x9ac3750C1A8DeC29Ca9dE7F643583c12Ec33FD5D";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -84,7 +108,7 @@ const IntentForm = () => {
           buyToken,
           sellAmount,
           minBuyAmount,
-          chainId: sourceChain === "Sepolia" ? 11155111 : 80001
+          chainId: Number(sourceChain),
         }),
       });
 
@@ -104,10 +128,10 @@ const IntentForm = () => {
    <form onSubmit={handleSubmit} style={formStyle}>
   <div style={gridContainerStyle}>
     <div style={gridItemStyle}>
-      <Dropdown label="Sell Token" value={sellToken} setValue={setSellToken} options={["USDC", "WETH"]} />
+      <Dropdown label="Sell Token" value={sellToken} setValue={setSellToken} options={["USDC", "WETH", "DAI"]} />
     </div>
     <div style={gridItemStyle}>
-      <Dropdown label="Buy Token" value={buyToken} setValue={setBuyToken} options={["USDC", "WETH"]} />
+      <Dropdown label="Buy Token" value={buyToken} setValue={setBuyToken} options={["USDC", "WETH", "DAI"]} />
     </div>
     <div style={gridItemStyle}>
       <Input label="Sell Amount" value={sellAmount} setValue={setSellAmount} />
@@ -116,10 +140,7 @@ const IntentForm = () => {
       <Input label="Min Buy Amount" value={minBuyAmount} setValue={setMinBuyAmount} />
     </div>
     <div style={gridItemStyle}>
-      <Dropdown label="Source Chain" value={sourceChain} setValue={setSourceChain} options={["Sepolia"]} />
-    </div>
-    <div style={gridItemStyle}>
-      <Dropdown label="Target Chain" value={targetChain} setValue={setTargetChain} options={["Sepolia"]} />
+      <Dropdown label="Source Chain" value={sourceChain} setValue={setSourceChain} options={chainOptions.map(opt => ({ label: opt.label, value: opt.value }))} />
     </div>
   </div>
 
@@ -140,7 +161,11 @@ const Dropdown = ({ label, value, setValue, options }) => (
     <label>{label}:</label>
     <select value={value} onChange={(e) => setValue(e.target.value)} style={selectStyle}>
       <option value="">Select {label}</option>
-      {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+      {options.map(opt => typeof opt === 'string' ? (
+        <option key={opt} value={opt}>{opt}</option>
+      ) : (
+        <option key={opt.value} value={opt.value}>{opt.label}</option>
+      ))}
     </select>
   </div>
 );
