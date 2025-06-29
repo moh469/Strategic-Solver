@@ -6,7 +6,7 @@
 
 ## 🎯 Overview
 
-Strategic Solver is a cutting-edge decentralized trading platform that revolutionizes DeFi through **intent-based trading**. Users express their trading intentions, and our sophisticated multi-stage optimization engine finds the best execution path through **Coincidence of Wants (CoW) matching**, **CFMM/AMM pool routing**, and **AI-enhanced parameter optimization**.
+Strategic Solver is a cutting-edge decentralized trading platform that revolutionizes DeFi through **intent-based trading**. Users express their trading intentions, and our sophisticated multi-stage optimization engine finds the best execution path through **Coincidence of Wants (CoW) matching**, **CFMM/AMM pool routing**, and **AI-enhanced parameter optimization**. The system addresses these real problems and solutions published in Proceedings of the 2024 IEEE International Conference on Blockchain (Blockchain):  ****"From CoWs to Multi-Chain AMMs: A Strategic Optimization Model for Enhancing Solvers”****
 
 ### ✨ Key Features
 
@@ -341,6 +341,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **MetaMask** - For wallet integration
 - **ElizaOS** - For AI/ML optimization framework
 - **OpenZeppelin** - For smart contract security patterns
+- Delft University of Technology — original research authors
 
 ## 📞 Support
 
