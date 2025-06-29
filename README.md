@@ -3,21 +3,31 @@
 ![Strategic Solver](https://img.shields.io/badge/DeFi-Intent--Based%20Trading-blue)
 ![Chain](https://img.shields.io/badge/Testnet-Sepolia%20%7C%20Fuji-green)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
-## 🎯 Overview
+## Overview
 
 Strategic Solver is a cutting-edge decentralized cross chain solver that revolutionizes DeFi through **intent-based trading**. Users express their trading intentions, and our sophisticated multi-stage optimization engine finds the best execution path through **Coincidence of Wants (CoW) matching**, **CFMM/AMM pool routing**, and **AI-enhanced parameter optimization**. The system addresses and improves these real problems and solutions published in Proceedings of the 2024 IEEE International Conference on Blockchain (Blockchain):  ****"From CoWs to Multi-Chain AMMs: A Strategic Optimization Model for Enhancing Solvers” Zeshun Shi∗ , Sydney Sweck† , and Omar Zaki†
 ∗ Cyber Security Group, Delft University of Technology, the Netherlands
-† Composable Foundation, Zug, Switzerland****
+† Composable Foundation, Zug, Switzerland****. 
 
-### ✨ Key Features
+## What is Strategic Solver?
 
-- 🤝 **CoW Matching**: Direct user-to-user trading without slippage
-- 🔄 **Multi-Stage Optimization**: CoW → Pool Routing → AI Enhancement
-- ⚡ **Real-Time Processing**: Sub-100ms intent matching
-- 🌉 **Cross-Chain Support**: Sepolia ↔ Fuji testnet bridge
-- 🧠 **ElizaOS AI**: Machine learning parameter optimization
-- 🔐 **MetaMask Integration**: Secure signature-based intent submission
-- 📊 **Automatic Settlement**: 10-second optimization cycles
+**Strategic Solver** is a sophisticated **cross-chain, intent-based trading platform** that optimizes token swaps across multiple blockchain networks using advanced AI/ML algorithms and multi-stage optimization techniques.
+
+## Core Concept: Intent-Based Trading
+
+Instead of traditional DEX trading where users specify exact routes and pools, Strategic Solver uses **"intents"** - high-level declarations of what users want to achieve:
+// Traditional DEX: "Swap 100 USDC for ETH on Uniswap V2"
+// Intent-Based: "I want to get the best ETH price for my 100 USDC"
+const intent = {
+  sellToken: "USDC",
+  buyToken: "ETH", 
+  sellAmount: "100",
+  userAddress: "0x...",
+  minBuyAmount: "0.05", // Optional minimum
+  deadline: timestamp
+}
+
+
 
 ## 🏗️ Architecture
 
