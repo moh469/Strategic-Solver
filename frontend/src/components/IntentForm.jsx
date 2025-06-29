@@ -21,11 +21,15 @@ const tokenAddresses = {
     USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC (faucet available)
     WETH: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // Sepolia WETH (faucet available)
     DAI:  "0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357", // Sepolia DAI (faucet available)
+    ETH:  "0x0000000000000000000000000000000000000000", // Native SepoliaETH (no faucet needed - get from faucet.sepolia.org)
+    USD:  "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // USD represented by USDC for now
   },
   43113: { // Avalanche Fuji Testnet - Real faucet tokens
     USDC: "0x5425890298aed601595a70AB815c96711a31Bc65", // Fuji USDC (faucet available)
     WETH: "0x1D308089a2D1Ced3f1Ce36B1FcaF815b07217be3", // Fuji WETH (faucet available) 
     DAI:  "0x51BC2DfB9D12d9dB50C855A5330fBA0faF761D15", // Fuji DAI (faucet available)
+    ETH:  "0x0000000000000000000000000000000000000000", // Native AVAX
+    USD:  "0x5425890298aed601595a70AB815c96711a31Bc65", // USD represented by USDC for now
   },
 };
 
@@ -55,63 +59,106 @@ const IntentForm = () => {
       const sellTokenAddress = tokenAddresses[sourceChain]?.[sellToken];
       const parsedAmount = ethers.parseUnits(sellAmount.toString(), 18);
 
-      if (!sellTokenAddress) {
+      if (!sellTokenAddress && sellTokenAddress !== "0x0000000000000000000000000000000000000000") {
         alert("❌ Invalid token or chain");
         return;
       }
 
-      const tokenContract = new ethers.Contract(sellTokenAddress, erc20Abi, signer);
+      const isNativeETH = sellToken === "ETH" || sellTokenAddress === "0x0000000000000000000000000000000000000000";
 
-      // 🔍 Check balance - user must get tokens from faucets
-      const balance = await tokenContract.balanceOf(userAddress);
-      if (balance < parsedAmount) {
-        const faucetLinks = {
-          11155111: {
-            USDC: "https://faucet.circle.com/",
-            WETH: "https://sepoliafaucet.com/",
-            DAI: "https://faucet.paradigm.xyz/"
-          },
-          43113: {
-            USDC: "https://faucet.avax.network/",
-            WETH: "https://faucet.avax.network/", 
-            DAI: "https://faucet.avax.network/"
-          }
-        };
-        
-        const faucetUrl = faucetLinks[sourceChain]?.[sellToken];
-        alert(`❌ Insufficient ${sellToken} balance. Please get testnet tokens from: ${faucetUrl || 'testnet faucet'}`);
-        return;
-      }
-
-      // 🔐 Approve tokens if needed
-      const allowance = await tokenContract.allowance(userAddress, cowMatcherAddress);
-      if (allowance < parsedAmount) {
-        console.log("🔐 Not enough allowance. Requesting approval...");
-        const approvalTx = await tokenContract.approve(cowMatcherAddress, ethers.MaxUint256);
-        await approvalTx.wait();
-        console.log("✅ Approved with MetaMask:", approvalTx.hash);
+      // 🔍 Check balance
+      let balance;
+      if (isNativeETH) {
+        // Check native ETH balance
+        balance = await provider.getBalance(userAddress);
+        if (balance < parsedAmount) {
+          alert(`❌ Insufficient ETH balance. Please get Sepolia ETH from: https://faucet.sepolia.org/`);
+          return;
+        }
       } else {
-        console.log("✅ Sufficient allowance already granted");
+        // Check ERC20 token balance
+        const tokenContract = new ethers.Contract(sellTokenAddress, erc20Abi, signer);
+        balance = await tokenContract.balanceOf(userAddress);
+        if (balance < parsedAmount) {
+          const faucetLinks = {
+            11155111: {
+              USDC: "https://faucet.circle.com/",
+              WETH: "https://sepoliafaucet.com/",
+              DAI: "https://faucet.paradigm.xyz/"
+            },
+            43113: {
+              USDC: "https://faucet.avax.network/",
+              WETH: "https://faucet.avax.network/", 
+              DAI: "https://faucet.avax.network/"
+            }
+          };
+          
+          const faucetUrl = faucetLinks[sourceChain]?.[sellToken];
+          alert(`❌ Insufficient ${sellToken} balance. Please get testnet tokens from: ${faucetUrl || 'testnet faucet'}`);
+          return;
+        }
+
+        // 🔐 Approve tokens if needed (only for ERC20 tokens, not native ETH)
+        const allowance = await tokenContract.allowance(userAddress, cowMatcherAddress);
+        if (allowance < parsedAmount) {
+          console.log("🔐 Not enough allowance. Requesting approval...");
+          const approvalTx = await tokenContract.approve(cowMatcherAddress, ethers.MaxUint256);
+          await approvalTx.wait();
+          console.log("✅ Approved with MetaMask:", approvalTx.hash);
+        } else {
+          console.log("✅ Sufficient allowance already granted");
+        }
       }
 
-      // 🚀 Submit intent to backend
-      const response = await fetch("http://localhost:3001/api/submit-intent", {
+      // 🚀 Submit intent with MetaMask signature
+      const intentData = {
+        sellToken,
+        buyToken,
+        sellAmount,
+        minBuyAmount,
+        chainId: Number(sourceChain),
+        userAddress,
+        timestamp: Date.now()
+      };
+
+      // Sign the intent with MetaMask
+      const message = JSON.stringify(intentData);
+      const { signature, address } = await requestSignature(message);
+
+      const response = await fetch("http://localhost:3001/submit-intent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sellToken,
-          buyToken,
-          sellAmount,
-          minBuyAmount,
-          chainId: Number(sourceChain),
+          ...intentData,
+          signature,
+          signedBy: address
         }),
       });
 
       const result = await response.json();
-      if (response.ok) {
-        alert("✅ Intent submitted! Tx: " + result.txHash);
+      if (response.ok && result.status === 'success') {
+        const intentResult = result.result;
+        let message = "✅ Intent submitted successfully!\n\n";
+        
+        if (intentResult.status === 'queued') {
+          message += `� Your intent has been queued for optimization!\n\n`;
+          message += `📋 Intent ID: ${intentResult.intentId}\n`;
+          message += `� Queue Position: ${intentResult.queuePosition}\n\n`;
+          message += `🔄 Multi-Stage Optimization Process:\n`;
+          intentResult.optimizationStages.forEach((stage, index) => {
+            message += `   ${index + 1}. ${stage}\n`;
+          });
+          message += `\n⏰ ${intentResult.nextCheck}\n\n`;
+          message += `💡 Your intent will be automatically matched with other users (CoW), `;
+          message += `routed through optimal pools, or enhanced with AI optimization for best execution.`;
+        } else {
+          message += `� Status: ${intentResult.status}\n`;
+          message += `💬 Message: ${intentResult.message}`;
+        }
+        
+        alert(message);
       } else {
-        alert("❌ Failed: " + result.error);
+        alert("❌ Failed: " + (result.error || result.details || 'Unknown error'));
       }
     } catch (err) {
       console.error("🔥 Error:", err);
@@ -149,10 +196,10 @@ const IntentForm = () => {
    </div>
   <div style={gridContainerStyle}>
     <div style={gridItemStyle}>
-      <Dropdown label="Sell Token" value={sellToken} setValue={setSellToken} options={["USDC", "WETH", "DAI"]} />
+      <Dropdown label="Sell Token" value={sellToken} setValue={setSellToken} options={["USDC", "WETH", "DAI", "ETH"]} />
     </div>
     <div style={gridItemStyle}>
-      <Dropdown label="Buy Token" value={buyToken} setValue={setBuyToken} options={["USDC", "WETH", "DAI"]} />
+      <Dropdown label="Buy Token" value={buyToken} setValue={setBuyToken} options={["USDC", "WETH", "DAI", "USD"]} />
     </div>
     <div style={gridItemStyle}>
       <Input label="Sell Amount" value={sellAmount} setValue={setSellAmount} />

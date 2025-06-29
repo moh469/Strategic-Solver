@@ -18,14 +18,16 @@ function matchCoWs(intents) {
 
       // Check if intents are compatible for direct swap
       // - a's sellToken is b's buyToken and vice versa
-      // - Each side's sell amount covers the other's minimum buy amount
+      // - Each side's sell amount covers the other's minimum buy amount (if specified)
       if (
         a.sellToken === b.buyToken &&
         a.buyToken === b.sellToken &&
-        Number(a.sellAmount) >= Number(b.minBuyAmount) &&
-        Number(b.sellAmount) >= Number(a.minBuyAmount)
+        Number(a.sellAmount) >= Number(b.minBuyAmount || 0) &&
+        Number(b.sellAmount) >= Number(a.minBuyAmount || 0)
       ) {
         matches.push({ a, b });
+        console.log(`✅ CoW match found: ${a.userAddress} ↔ ${b.userAddress}`);
+        console.log(`   ${a.sellAmount} ${a.sellToken} ↔ ${b.sellAmount} ${b.sellToken}`);
       }
     }
   }

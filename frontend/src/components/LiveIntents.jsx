@@ -4,6 +4,11 @@ import { ethers } from 'ethers';
 const fallbackSymbols = {
   '0x447dB80B9629A84aeFcad6c3fa6C0359d73BF796': 'USDC',
   '0x8a1FA303F13beb1b6bd34FDC8E42881966733927': 'WETH',
+  '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238': 'USDC',
+  '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14': 'WETH', 
+  '0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357': 'DAI',
+  '0x0000000000000000000000000000000000000000': 'ETH',
+  // For USD, we'll check if it maps to USDC address and show as USD
 };
 
 const LiveIntents = ({ tokenMap = fallbackSymbols }) => {
@@ -21,11 +26,26 @@ const LiveIntents = ({ tokenMap = fallbackSymbols }) => {
 
   const fetchIntents = async () => {
     try {
+      console.log("Fetching intents from:", "http://localhost:3001/api/intents");
       const res = await fetch("http://localhost:3001/api/intents");
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await res.text();
+        console.error("Received non-JSON response:", text);
+        throw new Error(`Expected JSON, got: ${contentType}. Response: ${text.substring(0, 100)}...`);
+      }
+      
       const data = await res.json();
+      console.log("Fetched intents:", data);
       setIntents(data);
     } catch (err) {
       console.error("Failed to fetch intents:", err);
+      setIntents([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -39,8 +59,13 @@ const LiveIntents = ({ tokenMap = fallbackSymbols }) => {
     }
   };
 
-  const getSymbol = (address) => {
-    return tokenMap[address] || `${address.slice(0, 6)}...${address.slice(-4)}`;
+  const getSymbol = (tokenOrAddress) => {
+    // If it's already a symbol (from updated backend), return as-is
+    if (tokenOrAddress && tokenOrAddress.length <= 5) {
+      return tokenOrAddress;
+    }
+    // Otherwise, use fallback mapping for addresses
+    return fallbackSymbols[tokenOrAddress] || `${tokenOrAddress.slice(0, 6)}...${tokenOrAddress.slice(-4)}`;
   };
 
   const filtered = intents.filter((intent) => {

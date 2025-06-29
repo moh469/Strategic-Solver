@@ -1,7 +1,7 @@
 // multiChainPools.js
 // Fetches UniswapV2-style pool data from Sepolia and Avalanche Fuji testnets
 
-const { ethers } = require('ethers');
+const ethers = require('ethers');
 
 // --- USER CONFIGURATION ---
 const CHAINS = [
@@ -41,24 +41,72 @@ const UNISWAP_V2_PAIR_ABI = [
 ];
 
 async function fetchAllPools() {
-  const allPools = [];
-  for (const chain of CHAINS) {
-    const provider = new ethers.JsonRpcProvider(chain.rpc);
-    for (const pool of chain.pools) {
-      const contract = new ethers.Contract(pool.address, UNISWAP_V2_PAIR_ABI, provider);
-      const [reserve0, reserve1] = await contract.getReserves();
-      const token0 = await contract.token0();
-      const token1 = await contract.token1();
-      allPools.push({
-        chain: chain.name,
-        address: pool.address,
-        tokens: [token0, token1],
-        reserves: { [token0]: reserve0.toString(), [token1]: reserve1.toString() },
-        fee: pool.fee
-      });
-    }
-  }
-  return allPools;
+  // For now, return empty pools array since we're testing CoW matching
+  // Pools will be added later for CFMM routing
+  console.log(`Fetched 0 pools - using CoW matching only`);
+  return [];
 }
 
-module.exports = { fetchAllPools };
+// Sample CoW intents for testing - these can be matched directly
+function getSampleCoWIntents() {
+  return [
+    // Intent 1: Alice wants to sell ETH for USDC
+    {
+      id: '1',
+      chainId: 11155111,
+      sellToken: 'ETH',
+      buyToken: 'USD',
+      sellAmount: '0.5',
+      minBuyAmount: '1200', // Expects at least 1200 USDC
+      userAddress: '0xAlice123',
+      deadline: Date.now() + 3600000, // 1 hour from now
+      sellTokenAddress: '0x0000000000000000000000000000000000000000',
+      buyTokenAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      isNativeETH: true
+    },
+    // Intent 2: Bob wants to sell USDC for ETH (perfect match for Alice)
+    {
+      id: '2',
+      chainId: 11155111,
+      sellToken: 'USD',
+      buyToken: 'ETH',
+      sellAmount: '1300', // Selling 1300 USDC
+      minBuyAmount: '0.48', // Expects at least 0.48 ETH
+      userAddress: '0xBob456',
+      deadline: Date.now() + 3600000,
+      sellTokenAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      buyTokenAddress: '0x0000000000000000000000000000000000000000',
+      isNativeETH: false
+    },
+    // Intent 3: Charlie wants to sell ETH for USDC (partial match scenario)
+    {
+      id: '3',
+      chainId: 11155111,
+      sellToken: 'ETH',
+      buyToken: 'USD',
+      sellAmount: '1.0',
+      minBuyAmount: '2000',
+      userAddress: '0xCharlie789',
+      deadline: Date.now() + 3600000,
+      sellTokenAddress: '0x0000000000000000000000000000000000000000',
+      buyTokenAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      isNativeETH: true
+    },
+    // Intent 4: David wants different tokens (no match available)
+    {
+      id: '4',
+      chainId: 11155111,
+      sellToken: 'WETH',
+      buyToken: 'DAI',
+      sellAmount: '2.0',
+      minBuyAmount: '4000',
+      userAddress: '0xDavid999',
+      deadline: Date.now() + 3600000,
+      sellTokenAddress: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9', // WETH on Sepolia
+      buyTokenAddress: '0x68194a729C2450ad26072b3D33ADaCbcef39D574', // DAI on Sepolia
+      isNativeETH: false
+    }
+  ];
+}
+
+module.exports = { fetchAllPools, getSampleCoWIntents };

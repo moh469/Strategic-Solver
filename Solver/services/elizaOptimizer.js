@@ -31,7 +31,7 @@ class ElizaOptimizer {
 
         // Get market predictions
         const marketPrediction = await this.marketPredictor.getShortTermPrediction(
-            pool.chainId,
+            pool?.chainId || intent.chainId || 11155111, // Use pool chainId, fallback to intent chainId, then Sepolia
             intent.tokens
         );
 
