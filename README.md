@@ -294,7 +294,7 @@ curl http://localhost:3001/api/intent-pool
 - ✅ MetaMask integration
 - ✅ Multi-stage optimization
 - ✅ Real-time settlement
-- ✅  Cross-chain intent bridging
+- ✅  Cross-chain intent bridging through Chainlink CCIP
 
 ### Phase 2: 🚧 Advanced Features (In Progress)
 - 🔄 Advanced pool routing algorithms
