@@ -341,7 +341,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **MetaMask** - For wallet integration
 - **ElizaOS** - For AI/ML optimization framework
 - **OpenZeppelin** - For smart contract security patterns
-- Delft University of Technology — original research authors
 
 ## 📞 Support
 
