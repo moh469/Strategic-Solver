@@ -5,7 +5,9 @@
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 ## 🎯 Overview
 
-Strategic Solver is a cutting-edge decentralized cross chain solver that revolutionizes DeFi through **intent-based trading**. Users express their trading intentions, and our sophisticated multi-stage optimization engine finds the best execution path through **Coincidence of Wants (CoW) matching**, **CFMM/AMM pool routing**, and **AI-enhanced parameter optimization**. The system addresses and improves these real problems and solutions published in Proceedings of the 2024 IEEE International Conference on Blockchain (Blockchain):  ****"From CoWs to Multi-Chain AMMs: A Strategic Optimization Model for Enhancing Solvers”****
+Strategic Solver is a cutting-edge decentralized cross chain solver that revolutionizes DeFi through **intent-based trading**. Users express their trading intentions, and our sophisticated multi-stage optimization engine finds the best execution path through **Coincidence of Wants (CoW) matching**, **CFMM/AMM pool routing**, and **AI-enhanced parameter optimization**. The system addresses and improves these real problems and solutions published in Proceedings of the 2024 IEEE International Conference on Blockchain (Blockchain):  ****"From CoWs to Multi-Chain AMMs: A Strategic Optimization Model for Enhancing Solvers” Zeshun Shi∗ , Sydney Sweck† , and Omar Zaki†
+∗ Cyber Security Group, Delft University of Technology, the Netherlands
+† Composable Foundation, Zug, Switzerland****
 
 ### ✨ Key Features
 
