@@ -1,6 +1,6 @@
-require("dotenv").config();
-const fs = require("fs");
 const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") }); // Explicitly specify the path to the .env file
+const fs = require("fs");
 
 // Load ABIs from abis/ folder
 const IntentsManagerABI = JSON.parse(
@@ -14,30 +14,16 @@ const CoWMatcherABI = JSON.parse(
   fs.readFileSync(path.join(__dirname, "abis", "CoWMatcher.json"), "utf8")
 ).abi;
 
-// Multi-chain RPC endpoints
+// Removed unsupported chain IDs and kept only Sepolia and Fuji
+// Default to Sepolia if no chain ID is specified
+const activeChainId = process.env.CHAIN_ID || "11155111";
+
 const rpc = {
-  31337: process.env.ANVIL_RPC_31337,
-  421614: process.env.ANVIL_RPC_421614,
-  11155111: process.env.ANVIL_RPC_11155111,
-  80002: process.env.ANVIL_RPC_80002,
+  11155111: process.env.ANVIL_RPC_11155111 || "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Sepolia
+  80002: process.env.ANVIL_RPC_80002 || "https://api.avax-test.network/ext/bc/C/rpc", // Fuji
 };
 
-// Multi-chain contract addresses
 const contracts = {
-  31337: {
-    intentsManager: process.env.INTENTS_MANAGER_31337,
-    solverRouter: process.env.SOLVER_ROUTER_31337,
-    cowMatcher: process.env.COW_MATCHER_31337,
-    cfmmAdapter: process.env.CFMM_ADAPTER_31337,
-    crossChainBridge: process.env.CROSS_CHAIN_BRIDGE_31337,
-  },
-  421614: {
-    intentsManager: process.env.INTENTS_MANAGER_421614,
-    solverRouter: process.env.SOLVER_ROUTER_421614,
-    cowMatcher: process.env.COW_MATCHER_421614,
-    cfmmAdapter: process.env.CFMM_ADAPTER_421614,
-    crossChainBridge: process.env.CROSS_CHAIN_BRIDGE_421614,
-  },
   11155111: {
     intentsManager: process.env.INTENTS_MANAGER_11155111,
     solverRouter: process.env.SOLVER_ROUTER_11155111,
@@ -54,30 +40,30 @@ const contracts = {
   },
 };
 
+// Select active chain's contracts
+const activeContracts = contracts[activeChainId];
+
+// Ensure CROSS_CHAIN_BRIDGE environment variables are defined
+if (!process.env.CROSS_CHAIN_BRIDGE_11155111 || !process.env.CROSS_CHAIN_BRIDGE_80002) {
+    console.warn("⚠️ CROSS_CHAIN_BRIDGE environment variables are missing. Using mock values.");
+    process.env.CROSS_CHAIN_BRIDGE_11155111 = "0xMockBridge11155111";
+    process.env.CROSS_CHAIN_BRIDGE_80002 = "0xMockBridge80002";
+}
+
+// Export configuration
 module.exports = {
-  rpc,
-  contracts,
-  abis: {
-    intentsManager: IntentsManagerABI,
-    solverRouter: SolverRouterABI,
-    cowMatcher: CoWMatcherABI,
-  },
-  chainIds: {
-    anvil1: 31337,
-    anvil2: 421614,
-    anvil3: 11155111,
-    anvil4: 80002,
-    mainnet: 1,
-    optimism: 10,
-    arbitrum: 42161,
-    // polygon and mumbai removed
-    base: 8453,
-    gnosis: 100,
-    fantom: 250,
-    bsc: 56,
-    celo: 42220,
-    moonbeam: 1284,
-    moonriver: 1285,
-    // ...add more as needed
-  },
+    rpc,
+    contracts: activeContracts, // Active chain contracts
+    allContracts: contracts, // All chain contracts for cross-chain functionality
+    activeChainId,
+    abis: {
+        intentsManager: IntentsManagerABI,
+        solverRouter: SolverRouterABI,
+        cowMatcher: CoWMatcherABI
+    }
 };
+
+// Log active configuration
+console.log("[CONFIG] Active Chain ID:", activeChainId);
+console.log("[CONFIG] Active RPC URL:", rpc[activeChainId]);
+console.log("[CONFIG] Active Contracts:", JSON.stringify(activeContracts, null, 2));

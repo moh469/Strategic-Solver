@@ -2,30 +2,13 @@ import React, { useEffect, useState } from "react";
 
 // Chain and token config for UI
 const chains = {
-  31337: { name: "Anvil Local 1 (31337)", explorer: (tx) => `http://localhost:8545/tx/${tx}` },
-  421614: { name: "Anvil Local 2 (421614)", explorer: (tx) => `http://localhost:8546/tx/${tx}` },
-  11155111: { name: "Anvil Local 3 (11155111)", explorer: (tx) => `http://localhost:8547/tx/${tx}` },
-  80002: { name: "Anvil Local 4 (80002)", explorer: (tx) => `http://localhost:8548/tx/${tx}` },
-  // Testnets (if needed)
-  // 11155111: { name: "Sepolia", explorer: (tx) => `https://sepolia.etherscan.io/tx/${tx}` },
-  // 421614: { name: "Arbitrum Sepolia", explorer: (tx) => `https://sepolia.arbiscan.io/tx/${tx}` },
-  // 80002: { name: "Polygon Amoy", explorer: (tx) => `https://amoy.polygonscan.com/tx/${tx}` },
+  11155111: { name: "Sepolia Testnet", explorer: (tx) => `https://sepolia.etherscan.io/tx/${tx}` },
+  43113: { name: "Avalanche Fuji Testnet", explorer: (tx) => `https://testnet.snowtrace.io/tx/${tx}` },
 };
 
 const tokenSymbols = {
-  // Add mock token addresses for each chain as needed:
-  // 31337
-  "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0": "WETH", // CFMM_ADAPTER
-  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9": "DAI",  // CROSS_CHAIN_BRIDGE
-  "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512": "USDC", // COW_MATCHER
-  // If mock token addresses differ on other chains, add them here:
-  // "0x...": "WETH", // 421614
-  // "0x...": "DAI",  // 11155111
-  // "0x...": "USDC", // 80002
-  // Existing testnet tokens
-  "0x447dB80B9629A84aeFcad6c3fa6C0359d73BF796": "USDC",
-  "0x8a1FA303F13beb1b6bd34FDC8E42881966733927": "WETH",
-  "0x8a78192AE2D6a59DdDA2237f9123fB7213FfEe82": "LINK",
+  // Add testnet token addresses as needed
+  // Example: "0x...": "USDC",
 };
 
 const getExplorerLink = (chainId, txHash) => {

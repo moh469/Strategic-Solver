@@ -37,17 +37,14 @@ FRONTEND_PID=$!
 # Wait for frontend to start
 sleep 5
 
-# 5. Submit test batch
-echo "Submitting test batch..."
-cd ../script/test
-node submitTestIntents.js
+# 5. Execute batch off-chain
+echo "Executing batch off-chain..."
+cd ../Solver/runners
+node main.js
 
-# 6. Monitor results
-echo "Monitoring batch execution..."
-node checkBatchResults.js
-
-# Keep running for 30 seconds to see results
-sleep 30
+# 6. Settle results on-chain
+echo "Settling results on-chain..."
+node settleResults.js
 
 # Cleanup
 echo "Cleaning up..."

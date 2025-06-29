@@ -4,12 +4,11 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const { ethers } = require("ethers");
 const config = require("./config");
-const { findMatchForIntent } = require("./Matcher.js");
-const { getAllMatches } = require("./services/matcher.js");
 const { logMatch, getMatchLog } = require("./matches.js");
+const { bridgeService, initializeBridges, forwardIntent } = require("./services/crosschain");
+const { SolverService, initializeContracts } = require("./services/solver");
 
 
-require("../Solver/runners/autoMatch.js");
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
@@ -19,36 +18,74 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// 🔧 Setup provider and signer
-console.log("DEBUG MATCHER_PRIVATE_KEY:", process.env.MATCHER_PRIVATE_KEY, "length:", process.env.MATCHER_PRIVATE_KEY?.length);
-const provider = new ethers.JsonRpcProvider(config.rpc.anvil);
-const signer = new ethers.Wallet(process.env.MATCHER_PRIVATE_KEY, provider);
+// Initialize provider with active chain RPC
+const provider = new ethers.JsonRpcProvider(config.rpc[config.activeChainId]);
+let signer;
 
-// 🧪 Log environment details
-console.log("🧪 Loaded .env MATCHER_PRIVATE_KEY:", process.env.MATCHER_PRIVATE_KEY?.slice(0, 10) + "...");
-console.log("🧪 Loaded .env RPC:", process.env.ANVIL_RPC);
-console.log("🧪 Intents Manager:", process.env.INTENTS_MANAGER);
-console.log("🧪 CoW Matcher:", process.env.COW_MATCHER);
-console.log("🧪 CFMM Adapter:", process.env.CFMM_ADAPTER);
-console.log("🧪 Cross Chain Bridge:", process.env.CROSS_CHAIN_BRIDGE);
-console.log("🧪 Solver Router:", process.env.SOLVER_ROUTER);
-signer.getAddress().then(addr => console.log("🧪 Signer address:", addr));
+// Endpoint to verify and process signed data
+app.post("/verify-signature", async (req, res) => {
+    try {
+        const { message, signature } = req.body;
+        if (!message || !signature) {
+            return res.status(400).json({ error: "Missing message or signature" });
+        }
 
-// 🔌 Connect contracts
-const intentsManagerAddress = process.env.INTENTS_MANAGER || config.contracts.intentsManager;
-const solverRouterAddress = process.env.SOLVER_ROUTER || config.contracts.solverRouter;
+        // Recover the address from the signature
+        const recoveredAddress = ethers.utils.verifyMessage(message, signature);
+        console.log("Recovered address:", recoveredAddress);
 
-const intentsManager = new ethers.Contract(
-  intentsManagerAddress,
-  config.abis.intentsManager,
-  signer
-);
+        // Load signer with recovered address
+        signer = new ethers.Wallet(recoveredAddress, provider);
+        
+        // Update contracts with new signer
+        await setupContracts(signer);
+        console.log("📝 Contracts updated with signer:", recoveredAddress);
 
-const solverRouter = new ethers.Contract(
-  solverRouterAddress,
-  config.abis.solverRouter,
-  signer
-);
+        // Process the transaction or intent here
+        res.json({ success: true, recoveredAddress });
+    } catch (error) {
+        console.error("Error verifying signature:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 🔌 Initialize contract variables
+let intentsManager;
+let solverRouter;
+
+// Function to initialize contracts with signer
+async function setupContracts(signer) {
+    const intentsManagerAddress = process.env.INTENTS_MANAGER || config.contracts.intentsManager;
+    const solverRouterAddress = process.env.SOLVER_ROUTER || config.contracts.solverRouter;
+
+        // Use fallback addresses if needed
+    const finalIntentsManagerAddress = intentsManagerAddress || "0xMockIntentsManager";
+    const finalSolverRouterAddress = solverRouterAddress || "0xMockSolverRouter";
+    
+    console.log("Using contract addresses:", {
+        intentsManager: finalIntentsManagerAddress,
+        solverRouter: finalSolverRouterAddress
+    });
+
+    console.log("Setting up contracts with addresses:", {
+        intentsManager: intentsManagerAddress,
+        solverRouter: solverRouterAddress
+    });
+
+    intentsManager = new ethers.Contract(
+        finalIntentsManagerAddress,
+        config.abis.intentsManager,
+        signer || provider
+    );
+
+    solverRouter = new ethers.Contract(
+        finalSolverRouterAddress,
+        config.abis.solverRouter,
+        signer || provider
+    );
+
+    return { intentsManager, solverRouter };
+}
 
 // 💱 Token address mapping
 const TOKEN_ADDRESSES = {
@@ -64,78 +101,87 @@ const TOKEN_ADDRESSES = {
   },
 };
 
-// 📬 Submit Intent Route
-app.post("/api/submit-intent", async (req, res) => {
-  try {
-    const { sellToken, buyToken, sellAmount, minBuyAmount, chainId } = req.body;
-    const network = chainId === 11155111 ? "Sepolia" : "Polygon";
-    const tokenAddresses = TOKEN_ADDRESSES[network];
+// Initialize solver service and contracts
+let solverService;
+async function initializeSolver() {
+    try {
+        // Initialize contracts with provider (read-only mode until signer is available)
+        const contracts = await setupContracts(provider);
+        console.log("� Contracts initialized in read-only mode");
 
-    if (!tokenAddresses[sellToken] || !tokenAddresses[buyToken]) {
-      return res.status(400).json({ error: "❌ Invalid token symbol" });
+        // Initialize solver service with provider for now
+        solverService = new SolverService(provider, contracts);
+        console.log('🚀 Solver service initialized');
+    } catch (error) {
+        console.error("Failed to initialize solver:", error);
+        process.exit(1);
     }
+}
 
-    const tx = await intentsManager.submitIntent(
-      tokenAddresses[sellToken],
-      tokenAddresses[buyToken],
-      ethers.parseUnits(sellAmount.toString(), 18),
-      ethers.parseUnits(minBuyAmount.toString(), 18),
-      chainId
-    );
-    const receipt = await tx.wait();
-    console.log("✅ Intent confirmed:", tx.hash);
+// Run initialization
+initializeSolver().catch(console.error);
 
-    const latestIntentId = await intentsManager.nextIntentId() - 1n;
-    const newIntentRaw = await intentsManager.getIntent(latestIntentId);
-    const newIntent = {
-      intentId: Number(latestIntentId),
-      tokenIn: newIntentRaw.tokenIn,
-      tokenOut: newIntentRaw.tokenOut,
-      amountIn: newIntentRaw.amountIn,
-      amountOutMin: newIntentRaw.minAmountOut,
-      chainId: Number(newIntentRaw.chainId),
-      status: Number(newIntentRaw.status),
-    };
+// Intent submission endpoint
+app.post("/submit-intent", async (req, res) => {
+  try {
+    const intent = req.body;
+    console.log(`📝 Received new intent:`, intent);
 
-    const allRawIntents = [];
-    for (let i = 0; i < Number(latestIntentId); i++) {
-      const intent = await intentsManager.getIntent(i);
-      allRawIntents.push({
-        intentId: i,
-        tokenIn: intent.tokenIn,
-        tokenOut: intent.tokenOut,
-        amountIn: intent.amountIn,
-        amountOutMin: intent.minAmountOut,
-        chainId: Number(intent.chainId),
-        status: Number(intent.status),
+    // Validate intent
+    if (!intent.chainId || !intent.sellToken || !intent.buyToken) {
+      return res.status(400).json({ 
+        error: 'Invalid intent format' 
       });
     }
 
-    const match = findMatchForIntent(newIntent, allRawIntents);
-    if (match) {
-      console.log(`🎯 Match found: ${match.a.intentId} ↔ ${match.b.intentId}`);
-      try {
-        const matchTx = await solverRouter.solve(match.a.intentId, match.b.intentId);
-        console.log("📤 solve() tx sent:", matchTx.hash);
-        const receipt = await matchTx.wait();
-        console.log("✅ Match executed in block:", receipt.blockNumber);
+    // Get existing intents for matching
+    const existingIntents = await getAllMatches();
 
-        // ✅ Log match for frontend
-        logMatch(match.a, match.b, matchTx.hash);
-
-      } catch (err) {
-        console.error("❌ Failed to execute match:", err);
-      }
-    }
+    // Process intent through solver service
+    const result = await solverService.processIntent(intent, existingIntents);
+    
+    // Log the result
+    await logMatch({
+      status: result.status,
+      type: result.type,
+      intentId: intent.id,
+      txHash: result.txHash,
+      targetChain: result.targetChain
+    });
 
     res.json({
-      status: "✅ Intent submitted",
-      txHash: tx.hash,
-      blockNumber: receipt.blockNumber,
+      status: 'success',
+      result: result
     });
-  } catch (err) {
-    console.error("❌ Submit intent failed:", err);
-    res.status(500).json({ error: "Submission failed", details: err.toString() });
+  } catch (error) {
+    console.error('Error processing intent:', error);
+    res.status(500).json({ 
+      error: 'Failed to process intent',
+      details: error.message
+    });
+  }
+});
+
+// Get intent status endpoint
+app.get("/intent/:intentId", async (req, res) => {
+  try {
+    const { intentId } = req.params;
+    const matchLog = await getMatchLog();
+    const intentStatus = matchLog.find(m => m.intentId === intentId);
+    
+    if (!intentStatus) {
+      return res.status(404).json({ 
+        error: 'Intent not found' 
+      });
+    }
+
+    res.json(intentStatus);
+  } catch (error) {
+    console.error('Error fetching intent status:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch intent status',
+      details: error.message 
+    });
   }
 });
 
@@ -204,10 +250,54 @@ app.get("/api/logged-matches", (req, res) => {
 });
 
 
+// 🌉 Cross-chain Routes
+app.post("/api/cross-chain/forward-intent", async (req, res) => {
+  try {
+    const { intentId, targetChainId } = req.body;
+    
+    if (!intentId || !targetChainId) {
+      return res.status(400).json({ error: "Missing intentId or targetChainId" });
+    }
 
+    const result = await forwardIntent(intentId, Number(targetChainId));
+    res.json({
+      status: "success",
+      messageId: result.messageId,
+      txHash: result.txHash
+    });
+  } catch (error) {
+    console.error("❌ Failed to forward intent:", error);
+    res.status(500).json({ error: error.toString() });
+  }
+});
+
+app.get("/api/cross-chain/fee", async (req, res) => {
+  try {
+    const { targetChainId, intentId } = req.query;
+    
+    if (!targetChainId || !intentId) {
+      return res.status(400).json({ error: "Missing targetChainId or intentId" });
+    }
+
+    const sourceChainId = Number(process.env.HOME_CHAIN_ID || "11155111"); // Default to Sepolia
+    const fee = await bridgeService.getCCIPFee(sourceChainId, Number(targetChainId), intentId);
+    
+    res.json({
+      fee: fee.toString(),
+      formattedFee: ethers.formatEther(fee)
+    });
+  } catch (error) {
+    console.error("❌ Failed to get CCIP fee:", error);
+    res.status(500).json({ error: error.toString() });
+  }
+});
+
+// Initialize cross-chain bridges
+initializeBridges().catch(console.error);
 
 // 🚀 Start Server
-app.listen(3001, () => {
-  console.log("🚀 Backend API running on http://localhost:3001");
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+  console.log(`🚀 Backend server listening on port ${PORT}`);
 });
 

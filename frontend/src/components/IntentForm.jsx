@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ethers } from 'ethers';
+import { requestSignature } from "../utils/metamask";
 
 const erc20Abi = [
   "function approve(address spender, uint256 amount) public returns (bool)",
@@ -10,30 +11,18 @@ const erc20Abi = [
 
 // Supported chains for dropdowns
 const chainOptions = [
-  { label: "Anvil Local 1 (31337)", value: "31337" },
-  { label: "Anvil Local 2 (421614)", value: "421614" },
-  { label: "Anvil Local 3 (11155111)", value: "11155111" },
-  { label: "Anvil Local 4 (80002)", value: "80002" },
+  { label: "Sepolia Testnet (11155111)", value: "11155111" },
+  { label: "Avalanche Fuji Testnet (43113)", value: "43113" },
 ];
 
 // Token addresses per chain (mock tokens use the same contract addresses on all chains)
 const tokenAddresses = {
-  31337: {
+  11155111: {
     USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // CoWMatcher (mock USDC)
     WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", // CFMMAdapter (mock WETH)
     DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // (mock DAI, update if deployed)
   },
-  421614: {
-    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-  },
-  11155111: {
-    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-  },
-  80002: {
+  43113: {
     USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
     WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
     DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
@@ -123,6 +112,26 @@ const IntentForm = () => {
       alert("Something went wrong: " + err.message);
     }
   };
+
+  // New function to sign and submit intent
+  async function handleIntentSubmission(intent) {
+    try {
+        const message = JSON.stringify(intent);
+        const { signature, address } = await requestSignature(message);
+
+        // Send the signed intent to the backend
+        const response = await fetch("/verify-signature", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, signature, address })
+        });
+
+        const result = await response.json();
+        console.log("Backend response:", result);
+    } catch (error) {
+        console.error("Error handling intent submission:", error);
+    }
+}
 
   return (
    <form onSubmit={handleSubmit} style={formStyle}>
