@@ -42,20 +42,7 @@ const intent = {
             └───────────┘ └───────┘ └────────┘
 
 
-## 🎯 How It Works
 
-### 1. Intent Submission
-```javascript
-// User submits intent via UI or API
-{
-  "sellToken": "USDC",
-  "buyToken": "WETH",
-  "sellAmount": "3000",
-  "minBuyAmount": "1.5",
-  "userAddress": "0x...",
-  "chainId": 11155111
-}
-```
 
 ### 2. Multi-Stage Optimization Pipeline
 
