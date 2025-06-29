@@ -45,7 +45,43 @@ const intent = {
             └───────────┘ └───────┘ └────────┘
 
 
+## 🎯 How It Works
+
+### 1. Intent Submission
+```javascript
+// User submits intent via UI or API
+{
+  "sellToken": "USDC",
+  "buyToken": "WETH",
+  "sellAmount": "3000",
+  "minBuyAmount": "1.5",
+  "userAddress": "0x...",
+  "chainId": 11155111
+}
 ```
+
+### 2. Multi-Stage Optimization Pipeline
+
+#### Stage 1: CoW Matching 🤝
+- **Purpose**: Direct user-to-user trading
+- **Benefit**: Zero slippage, optimal pricing
+- **Speed**: <100ms matching
+- **Example**: Alice sells USDC→WETH, Bob sells WETH→USDC = Perfect match!
+
+#### Stage 2: CFMM/Pool Routing 🏊
+- **Purpose**: Route through AMM pools when no CoW match
+- **Features**: Multi-hop routing, slippage optimization
+- **Pools**: Uniswap V2/V3, SushiSwap, etc.
+
+#### Stage 3: ElizaOS AI Enhancement 🧠
+- **Purpose**: Parameter optimization and market prediction
+- **Features**: ML-based execution timing, gas optimization
+- **Learning**: Continuous improvement from execution history
+
+### 3. Automatic Settlement
+- **Frequency**: Every 10 seconds
+- **Process**: Queue → Optimize → Execute → Settle
+- **Monitoring**: Real-time pool updates and match notifications
 
 ## 🚀 Quick Start
 
@@ -99,43 +135,7 @@ cd /home/mg/Strategic-Solver
 - **Submit Intent**: http://localhost:3001/api/submit-intent
 - **Optimization Info**: http://localhost:3001/api/optimization-info
 
-## 🎯 How It Works
 
-### 1. Intent Submission
-```javascript
-// User submits intent via UI or API
-{
-  "sellToken": "USDC",
-  "buyToken": "WETH",
-  "sellAmount": "3000",
-  "minBuyAmount": "1.5",
-  "userAddress": "0x...",
-  "chainId": 11155111
-}
-```
-
-### 2. Multi-Stage Optimization Pipeline
-
-#### Stage 1: CoW Matching 🤝
-- **Purpose**: Direct user-to-user trading
-- **Benefit**: Zero slippage, optimal pricing
-- **Speed**: <100ms matching
-- **Example**: Alice sells USDC→WETH, Bob sells WETH→USDC = Perfect match!
-
-#### Stage 2: CFMM/Pool Routing 🏊
-- **Purpose**: Route through AMM pools when no CoW match
-- **Features**: Multi-hop routing, slippage optimization
-- **Pools**: Uniswap V2/V3, SushiSwap, etc.
-
-#### Stage 3: ElizaOS AI Enhancement 🧠
-- **Purpose**: Parameter optimization and market prediction
-- **Features**: ML-based execution timing, gas optimization
-- **Learning**: Continuous improvement from execution history
-
-### 3. Automatic Settlement
-- **Frequency**: Every 10 seconds
-- **Process**: Queue → Optimize → Execute → Settle
-- **Monitoring**: Real-time pool updates and match notifications
 
 ## 🔧 Configuration
 
