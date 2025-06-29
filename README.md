@@ -307,6 +307,8 @@ curl http://localhost:3001/api/intent-pool
 - 📋 Additional chain support
 - 📋 Governance token launch
 - 📋 Institutional trading features
+  ```
+Flow Diagram
 
 ![Strategic Solver Architecture](./Strategic-solver.png)
 
