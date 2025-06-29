@@ -345,13 +345,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Documentation**: See `SCRIPTS_README.md` for detailed script usage
-- **Issues**: Open a GitHub issue
-- **Community**: Join our Discord server
-- **Email**: support@strategic-solver.io
+- **Email**: moh469@gmail.com
 
 ---
-
-**Built with ❤️ for the DeFi community**
-
-*Strategic Solver - Where Intents Meet Optimal Execution* 🎯
