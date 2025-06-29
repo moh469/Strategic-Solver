@@ -79,7 +79,7 @@ function simulateSwapWithUtility(cfmm, intent) {
 
 // Market condition update
 async function updateMarketState() {
-  marketState = await marketMonitor.getCurrentState();
+  marketState = marketMonitor.monitor(optimizerParams);
   
   // Adjust parameters based on market conditions
   if (marketState.volatility === 'high') {

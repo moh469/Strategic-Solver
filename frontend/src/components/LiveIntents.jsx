@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
-const { BigNumber } = ethers;
-
 
 const fallbackSymbols = {
   '0x447dB80B9629A84aeFcad6c3fa6C0359d73BF796': 'USDC',
@@ -35,8 +33,7 @@ const LiveIntents = ({ tokenMap = fallbackSymbols }) => {
 
   const formatAmount = (value) => {
     try {
-      const bn = BigNumber.from(value);
-      return parseFloat(ethers.utils.formatUnits(bn, 18)).toFixed(6);
+      return parseFloat(ethers.formatUnits(value, 18)).toFixed(6);
     } catch (e) {
       return '0.000000';
     }

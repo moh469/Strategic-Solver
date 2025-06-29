@@ -5,38 +5,38 @@ import { requestSignature } from "../utils/metamask";
 const erc20Abi = [
   "function approve(address spender, uint256 amount) public returns (bool)",
   "function allowance(address owner, address spender) public view returns (uint256)",
-  "function balanceOf(address owner) public view returns (uint256)",
-  "function mint(address to, uint256 amount) public"  
+  "function balanceOf(address owner) public view returns (uint256)"
 ];
 
-// Supported chains for dropdowns
+// Supported chains for dropdowns - Intent submission happens on Sepolia, 
+// but solver can execute across multiple chains based on optimal routing
 const chainOptions = [
-  { label: "Sepolia Testnet (11155111)", value: "11155111" },
-  { label: "Avalanche Fuji Testnet (43113)", value: "43113" },
+  { label: "Sepolia Testnet (Intent Submission)", value: "11155111" },
+  // { label: "Avalanche Fuji Testnet", value: "43113" }, // Future cross-chain support
 ];
 
-// Token addresses per chain (mock tokens use the same contract addresses on all chains)
+// Token addresses per chain (TESTNET FAUCET TOKENS ONLY)
 const tokenAddresses = {
-  11155111: {
-    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // CoWMatcher (mock USDC)
-    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", // CFMMAdapter (mock WETH)
-    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9", // (mock DAI, update if deployed)
+  11155111: { // Sepolia Testnet - Real faucet tokens
+    USDC: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC (faucet available)
+    WETH: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // Sepolia WETH (faucet available)
+    DAI:  "0xFF34B3d4Aee8ddCd6F9AFFFB6Fe49bD371b8a357", // Sepolia DAI (faucet available)
   },
-  43113: {
-    USDC: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-    WETH: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-    DAI:  "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  43113: { // Avalanche Fuji Testnet - Real faucet tokens
+    USDC: "0x5425890298aed601595a70AB815c96711a31Bc65", // Fuji USDC (faucet available)
+    WETH: "0x1D308089a2D1Ced3f1Ce36B1FcaF815b07217be3", // Fuji WETH (faucet available) 
+    DAI:  "0x51BC2DfB9D12d9dB50C855A5330fBA0faF761D15", // Fuji DAI (faucet available)
   },
 };
 
-const cowMatcherAddress = "0x9ac3750C1A8DeC29Ca9dE7F643583c12Ec33FD5D";
+const cowMatcherAddress = "0x9D40c36453eda0a5d565739318356416e2bfaFEe"; // Deployed CoWMatcher address
 
 const IntentForm = () => {
   const [sellToken, setSellToken] = useState('');
   const [buyToken, setBuyToken] = useState('');
   const [sellAmount, setSellAmount] = useState('');
   const [minBuyAmount, setMinBuyAmount] = useState('');
-  const [sourceChain, setSourceChain] = useState('');
+  const [sourceChain, setSourceChain] = useState('11155111'); // Default to Sepolia where intents are submitted
   const [orderType, setOrderType] = useState('Limit Buy');
 
   const handleSubmit = async (e) => {
@@ -62,19 +62,25 @@ const IntentForm = () => {
 
       const tokenContract = new ethers.Contract(sellTokenAddress, erc20Abi, signer);
 
-      // 🔍 Check balance and mint if insufficient
+      // 🔍 Check balance - user must get tokens from faucets
       const balance = await tokenContract.balanceOf(userAddress);
       if (balance < parsedAmount) {
-        console.log(`Minting ${sellAmount} ${sellToken}...`);
-        try {
-          const mintTx = await tokenContract.mint(userAddress, parsedAmount);
-          await mintTx.wait();
-          console.log(`Minted ${sellAmount} ${sellToken}`);
-        } catch (mintErr) {
-          console.error("❌ Mint failed:", mintErr);
-          alert("Mint failed: " + mintErr.message);
-          return;
-        }
+        const faucetLinks = {
+          11155111: {
+            USDC: "https://faucet.circle.com/",
+            WETH: "https://sepoliafaucet.com/",
+            DAI: "https://faucet.paradigm.xyz/"
+          },
+          43113: {
+            USDC: "https://faucet.avax.network/",
+            WETH: "https://faucet.avax.network/", 
+            DAI: "https://faucet.avax.network/"
+          }
+        };
+        
+        const faucetUrl = faucetLinks[sourceChain]?.[sellToken];
+        alert(`❌ Insufficient ${sellToken} balance. Please get testnet tokens from: ${faucetUrl || 'testnet faucet'}`);
+        return;
       }
 
       // 🔐 Approve tokens if needed
@@ -135,6 +141,12 @@ const IntentForm = () => {
 
   return (
    <form onSubmit={handleSubmit} style={formStyle}>
+   <div style={{ marginBottom: '1rem', padding: '10px', backgroundColor: '#111', border: '1px solid #00ff00', borderRadius: '4px' }}>
+     <p style={{ margin: '0', color: '#00ff00', fontSize: '14px' }}>
+       💡 <strong>How it works:</strong> Submit intent on Sepolia → Solver finds optimal execution plan → 
+       Settlement happens locally or cross-chain based on best available liquidity
+     </p>
+   </div>
   <div style={gridContainerStyle}>
     <div style={gridItemStyle}>
       <Dropdown label="Sell Token" value={sellToken} setValue={setSellToken} options={["USDC", "WETH", "DAI"]} />
@@ -149,7 +161,7 @@ const IntentForm = () => {
       <Input label="Min Buy Amount" value={minBuyAmount} setValue={setMinBuyAmount} />
     </div>
     <div style={gridItemStyle}>
-      <Dropdown label="Source Chain" value={sourceChain} setValue={setSourceChain} options={chainOptions.map(opt => ({ label: opt.label, value: opt.value }))} />
+      <Dropdown label="Intent Submission Chain" value={sourceChain} setValue={setSourceChain} options={chainOptions.map(opt => ({ label: opt.label, value: opt.value }))} />
     </div>
   </div>
 
@@ -157,6 +169,8 @@ const IntentForm = () => {
   <div style={{ marginBottom: '1rem' }}>
     <Dropdown label="Order Type" value={orderType} setValue={setOrderType} options={["Limit Buy", "Limit Sell"]} />
   </div>
+
+
 
   <button type="submit" style={buttonStyle}>Submit Intent</button>
 </form>

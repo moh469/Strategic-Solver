@@ -2,21 +2,21 @@ const CrossChainRouter = require("./crosschain-router");
 const { ethers } = require("ethers");
 const config = require("../config");
 
-// Initialize signer
-const signer = new ethers.Wallet(
-    process.env.ROUTER_OPERATOR_KEY || process.env.PRIVATE_KEY,
-    new ethers.JsonRpcProvider(config.rpc[process.env.HOME_CHAIN_ID || "11155111"]) // Default to Sepolia
-);
-
-// Initialize router
-const router = new CrossChainRouter(signer);
+// Cross-chain manager - handles routing logic only
+// Actual transactions are executed via MetaMask in frontend
 
 /**
- * Start the cross-chain routing system
+ * Initialize cross-chain routing logic (without signer)
+ * Signer will be provided from frontend MetaMask connection for actual transactions
+ */
+const router = new CrossChainRouter();
+
+/**
+ * Start the cross-chain routing system monitoring
  */
 async function startCrossChainRouting() {
     try {
-        // Start monitoring all chains
+        // Start monitoring all chains (read-only operations)
         await router.startMonitoring();
         console.log("🌉 Cross-chain routing system started");
 

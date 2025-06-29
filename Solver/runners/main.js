@@ -19,13 +19,13 @@ const cfmmAdapterAbi = require('../../out/CFMMAdapter.sol/CFMMAdapter.json').abi
 const cowMatcherAddress = process.env.COW_MATCHER_ADDRESS || "0xYourCoWMatcherAddress";
 const cfmmAdapterAddress = process.env.CFMM_ADAPTER_ADDRESS || "0xYourCFMMAdapterAddress";
 const rpcUrl = process.env.RPC_URL || "https://your.rpc.url";
-const privateKey = undefined; // Private key usage removed for security reasons
+// Private key removed - all user transactions should go through MetaMask in frontend
 
 // Print environment info for clarity
 console.log("[ENV] Using RPC:", rpcUrl);
 console.log("[ENV] CoWMatcher:", cowMatcherAddress);
 console.log("[ENV] CFMMAdapter:", cfmmAdapterAddress);
-console.log("[ENV] PrivateKey:", privateKey ? privateKey.slice(0, 8) + "..." : "Not used" );
+console.log("[ENV] Note: User transactions handled via MetaMask in frontend");
 
 async function main() {
   // Step 1: Fetch all current intents (from DB, blockchain, or API)
@@ -50,8 +50,14 @@ async function main() {
     }
   }
 
-  // Step 4: Delegate settlement to settleResults.js
-  await settleResults(results, rpcUrl, privateKey, cowMatcherAddress, cowMatcherAbi, cfmmAdapterAddress, cfmmAdapterAbi);
+  // Step 4: Note - Settlement should be handled via MetaMask transactions in frontend
+  // Backend only provides matching logic, actual transactions signed by user
+  console.log("✅ Matching complete. Settlement should be initiated via frontend MetaMask integration.");
+  
+  // For development/testing, we can simulate settlement without actual transactions
+  if (results.matchedViaCoW?.length > 0 || results.matchedViaCFMM?.length > 0) {
+    console.log("🔄 Settlement simulation - actual transactions handled by frontend");
+  }
 }
 
 // Run the main workflow and catch any top-level errors

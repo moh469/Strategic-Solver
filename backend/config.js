@@ -19,35 +19,35 @@ const CoWMatcherABI = JSON.parse(
 const activeChainId = process.env.CHAIN_ID || "11155111";
 
 const rpc = {
-  11155111: process.env.ANVIL_RPC_11155111 || "https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID", // Sepolia
-  80002: process.env.ANVIL_RPC_80002 || "https://api.avax-test.network/ext/bc/C/rpc", // Fuji
+  11155111: process.env.SEPOLIA_RPC_URL || "https://1rpc.io/sepolia", // Sepolia Testnet
+  // 43113: process.env.FUJI_RPC_URL || "https://api.avax-test.network/ext/bc/C/rpc", // Fuji Testnet - Disabled for now due to ENS issues
 };
 
 const contracts = {
-  11155111: {
+  11155111: { // Sepolia Testnet
     intentsManager: process.env.INTENTS_MANAGER_11155111,
     solverRouter: process.env.SOLVER_ROUTER_11155111,
     cowMatcher: process.env.COW_MATCHER_11155111,
     cfmmAdapter: process.env.CFMM_ADAPTER_11155111,
     crossChainBridge: process.env.CROSS_CHAIN_BRIDGE_11155111,
   },
-  80002: {
-    intentsManager: process.env.INTENTS_MANAGER_80002,
-    solverRouter: process.env.SOLVER_ROUTER_80002,
-    cowMatcher: process.env.COW_MATCHER_80002,
-    cfmmAdapter: process.env.CFMM_ADAPTER_80002,
-    crossChainBridge: process.env.CROSS_CHAIN_BRIDGE_80002,
-  },
+  // 43113: { // Avalanche Fuji Testnet - Disabled for now due to ENS issues
+  //   intentsManager: process.env.INTENTS_MANAGER_43113,
+  //   solverRouter: process.env.SOLVER_ROUTER_43113,
+  //   cowMatcher: process.env.COW_MATCHER_43113,
+  //   cfmmAdapter: process.env.CFMM_ADAPTER_43113,
+  //   crossChainBridge: process.env.CROSS_CHAIN_BRIDGE_43113,
+  // },
 };
 
 // Select active chain's contracts
 const activeContracts = contracts[activeChainId];
 
-// Ensure CROSS_CHAIN_BRIDGE environment variables are defined
-if (!process.env.CROSS_CHAIN_BRIDGE_11155111 || !process.env.CROSS_CHAIN_BRIDGE_80002) {
+// Ensure CROSS_CHAIN_BRIDGE environment variables are defined for testnets
+if (!process.env.CROSS_CHAIN_BRIDGE_11155111 || !process.env.CROSS_CHAIN_BRIDGE_43113) {
     console.warn("⚠️ CROSS_CHAIN_BRIDGE environment variables are missing. Using mock values.");
     process.env.CROSS_CHAIN_BRIDGE_11155111 = "0xMockBridge11155111";
-    process.env.CROSS_CHAIN_BRIDGE_80002 = "0xMockBridge80002";
+    process.env.CROSS_CHAIN_BRIDGE_43113 = "0xMockBridge43113";
 }
 
 // Export configuration

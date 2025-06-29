@@ -295,6 +295,68 @@ app.get("/api/cross-chain/fee", async (req, res) => {
 // Initialize cross-chain bridges
 initializeBridges().catch(console.error);
 
+// Endpoint to update contract addresses after MetaMask deployment
+app.post("/api/update-contract-addresses", async (req, res) => {
+    try {
+        const { addresses } = req.body;
+        
+        if (!addresses) {
+            return res.status(400).json({ error: "Missing addresses" });
+        }
+
+        console.log("📝 Updating contract addresses:", addresses);
+        
+        // Update environment variables (in memory)
+        process.env.INTENTS_MANAGER_ADDRESS = addresses.IntentsManager;
+        process.env.COW_MATCHER_ADDRESS = addresses.CoWMatcher;
+        process.env.CFMM_ADAPTER_ADDRESS = addresses.CFMMAdapter;
+        process.env.CROSS_CHAIN_BRIDGE_ADDRESS = addresses.CrossChainIntentBridge;
+        process.env.SOLVER_ROUTER_ADDRESS = addresses.SolverRouter;
+
+        // Reinitialize contracts with new addresses
+        try {
+            const { reinitializeContracts } = require("./services/solver");
+            const success = await reinitializeContracts();
+            if (success) {
+                console.log("✅ Contracts reinitialized with new addresses");
+            } else {
+                console.warn("⚠️ Contract reinitialization failed");
+            }
+        } catch (contractError) {
+            console.warn("⚠️ Contract reinitialization failed:", contractError.message);
+        }
+
+        res.json({ 
+            success: true, 
+            message: "Contract addresses updated successfully",
+            addresses 
+        });
+    } catch (error) {
+        console.error("Error updating contract addresses:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add contracts status endpoint
+app.get("/api/contracts/status", (req, res) => {
+    try {
+        const { getContractsStatus } = require("./services/solver");
+        const status = getContractsStatus();
+        res.json({ 
+            contractsReady: status.initialized,
+            contracts: status.contracts,
+            message: status.initialized ? "Contracts are ready" : "Contracts need to be deployed"
+        });
+    } catch (error) {
+        res.json({ 
+            contractsReady: false,
+            contracts: {},
+            message: "Contracts not initialized",
+            error: error.message
+        });
+    }
+});
+
 // 🚀 Start Server
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

@@ -2,7 +2,13 @@
 class MarketConditionMonitor {
     monitor(params) {
         console.log("Monitoring market with params:", params);
-        return { status: "stable" };
+        return { 
+            status: "stable",
+            volatility: 'normal',
+            liquidityDepth: 'normal',
+            gasPrice: 'normal',
+            ccipCongestion: 'normal'
+        };
     }
 }
 

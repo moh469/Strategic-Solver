@@ -44,11 +44,15 @@ async function initializeContracts() {
     console.log(`[DEBUG] Active Chain ID: ${activeChainId}`);
     console.log(`[DEBUG] IntentsManager Address: ${chainConfig.intentsManager}`);
 
-    if (!chainConfig.intentsManager) {
-      throw new Error(`IntentsManager address not configured for chain ID: ${activeChainId}`);
+    if (!chainConfig.intentsManager || chainConfig.intentsManager.includes('Actual') || chainConfig.intentsManager.includes('1234567890')) {
+      console.log(`⚠️ IntentsManager address not deployed yet for chain ID: ${activeChainId}`);
+      console.log(`ℹ️ Please deploy contracts via frontend MetaMask integration first`);
+      return null; // Return null instead of throwing error
     }
-    if (!chainConfig.solverRouter) {
-      throw new Error(`SolverRouter address not configured for chain ID: ${activeChainId}`);
+    if (!chainConfig.solverRouter || chainConfig.solverRouter.includes('1234567890')) {
+      console.log(`⚠️ SolverRouter address not deployed yet for chain ID: ${activeChainId}`);
+      console.log(`ℹ️ Please deploy contracts via frontend MetaMask integration first`);
+      return null; // Return null instead of throwing error
     }
 
     console.log(`[DEBUG] IntentsManager ABI:`, config.abis.intentsManager);
@@ -99,14 +103,31 @@ async function initializeContracts() {
 }
 
 // Initialize contracts
-let intentsManager, solverRouter;
-initializeContracts().then(contracts => {
-  intentsManager = contracts.intentsManager;
-  solverRouter = contracts.solverRouter;
-}).catch(error => {
-  console.error('Failed to initialize solver service:', error);
-  process.exit(1);
-});
+let intentsManager = null;
+let solverRouter = null;
+let contractsInitialized = false;
+
+async function initializeContractsIfReady() {
+  try {
+    const contracts = await initializeContracts();
+    if (contracts) {
+      intentsManager = contracts.intentsManager;
+      solverRouter = contracts.solverRouter;
+      contractsInitialized = true;
+      console.log('✅ Contracts successfully initialized');
+      return true;
+    } else {
+      console.log('⏳ Contracts not ready - backend running in limited mode');
+      return false;
+    }
+  } catch (error) {
+    console.log('⚠️ Contract initialization deferred:', error.message);
+    return false;
+  }
+}
+
+// Try to initialize contracts, but don't crash if they're not ready
+initializeContractsIfReady();
 
 // Store intents in memory (DB recommended)
 const pendingIntents = [];
@@ -130,6 +151,11 @@ function calculateUtility(intent, pb) {
 }
 
 async function trySolve(intentId) {
+  if (!contractsInitialized) {
+    console.log("⚠️ Contracts not initialized yet. Please deploy contracts first.");
+    return { error: "Contracts not deployed" };
+  }
+
   const newIntent = await intentsManager.getIntent(intentId);
   console.log("🧠 Received new intent:", newIntent);
 
@@ -151,8 +177,16 @@ async function trySolve(intentId) {
   console.log("🕗 No CoW match. Intent saved for CFMM fallback.");
 }
 
+// Add function to reinitialize contracts after deployment
+async function reinitializeContracts() {
+  console.log('🔄 Attempting to reinitialize contracts...');
+  return await initializeContractsIfReady();
+}
+
 module.exports = {
   trySolve,
   SolverService,
-  initializeContracts
+  initializeContracts,
+  reinitializeContracts,
+  getContractsStatus: () => ({ initialized: contractsInitialized, contracts: { intentsManager: !!intentsManager, solverRouter: !!solverRouter } })
 };
