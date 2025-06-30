@@ -348,3 +348,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Email**: moh469@gmail.com
 
 ---
+Disclaimer: Code is not thoroughly tested. Therefore, do not use it using real funds. 
